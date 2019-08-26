@@ -6,6 +6,7 @@ from libdex import dex
 import library
 total_permission_list = []
 usage_perm_list = []
+lib_perm_list = []
 perm_map = {}
 def get_permission(content):
     perm_list = content.split('\n')
@@ -23,7 +24,8 @@ def get_method_perm(file_path):
     for lines in f.readlines():
         now_line = lines.strip().split('  ::  ')
         if len(now_line)==2:
-            perm_map[now_line[0]] = now_line[1]
+            end = now_line[0].index('(')
+            perm_map[now_line[0][0:end]] = now_line[1]
 
 def get_dex_file(filepath):
     permission_content = os.popen('./tools/aapt dump permissions {}'.format(filepath)).read()
@@ -40,19 +42,27 @@ def get_dex_file(filepath):
             dex_file = open(dexfilename,'wb+')
             dex_file.write(apkfile.read(tempfile))
             dex_info = dex.Dex(dexfilename)
+            library_list = library.detect_exact_dex_libraries(dex_info)
             if hasattr(dex_info, 'classes'):
                 for class_ in dex_info.classes:
-                    print(class_.name())
+                    #print(class_.name())
                     for method in class_.methods():
                         #print('method', method.name())
-                        now_perm = perm_map.get(method, None)
+                        method_name = method.name().replace('/','.')
+                        if method_name.find('init') >= 0:
+                            end = method_name.index(';->')
+                            method_name = method_name[1:end]
+                        else:
+                            method_name = method_name.replace(';->','.')[1:]
+                        #print('method', method_name)
+                        now_perm = perm_map.get(method_name, None)
                         if now_perm is not None and now_pem not in usage_perm_list:
                             usage_perm_list.append(now_perm)
-            print(usage_perm_list)
-            library_list = library.detect_exact_dex_libraries(dex_info)
-            print(library_list)
+            print('use permisiion',usage_perm_list)
+            print('library',library_list)
 
 get_method_perm('./tools/framework-map-25.txt')
 get_method_perm('./tools/sdk-map-25.txt')
+#print(perm_map)
 get_dex_file(sys.argv[1])
 
