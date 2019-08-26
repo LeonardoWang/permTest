@@ -7,6 +7,7 @@ import library
 total_permission_list = []
 usage_perm_list = []
 lib_perm_list = []
+over_perm_list = []
 perm_map = {}
 def get_permission(content):
     perm_list = content.split('\n')
@@ -29,8 +30,8 @@ def get_method_perm(file_path):
 
 def get_dex_file(filepath):
     permission_content = os.popen('./tools/aapt dump permissions {}'.format(filepath)).read()
-    print(permission_content)
-
+    #print(permission_content)
+    get_permission(permission_content)
     apkfile = zipfile.ZipFile(filepath,'r')
     if os.path.isdir('dex') == False:
         os.mkdir('dex')
@@ -46,6 +47,9 @@ def get_dex_file(filepath):
             if hasattr(dex_info, 'classes'):
                 for class_ in dex_info.classes:
                     #print(class_.name())
+                    tag = False
+                    if class_.name in library_list.keys():
+                        tag = True
                     for method in class_.methods():
                         #print('method', method.name())
                         method_name = method.name().replace('/','.')
@@ -56,10 +60,18 @@ def get_dex_file(filepath):
                             method_name = method_name.replace(';->','.')[1:]
                         #print('method', method_name)
                         now_perm = perm_map.get(method_name, None)
-                        if now_perm is not None and now_pem not in usage_perm_list:
+                        if now_perm is not None and now_perm not in usage_perm_list:
                             usage_perm_list.append(now_perm)
-            print('use permisiion',usage_perm_list)
-            print('library',library_list)
+                        if tag and now_perm is not None and now_perm not in lib_perm_list:
+                            lib_perm_list.append(now_perm)
+    for perm in total_permission_list:
+        if perm not in usage_perm_list:
+            over_perm_list.append(perm)
+    print('total_permission_list',total_permission_list)
+    print('true use permission',usage_perm_list)
+    print('library',library_list)
+    print('library permissiom usage',lib_perm_list)
+    print('overprilege permission', over_perm_list)
 
 get_method_perm('./tools/framework-map-25.txt')
 get_method_perm('./tools/sdk-map-25.txt')
